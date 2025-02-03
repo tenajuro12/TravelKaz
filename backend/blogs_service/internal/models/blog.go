@@ -1,33 +1,30 @@
 package models
 
 import (
-	"time"
+	"gorm.io/gorm"
 )
 
-// Blog Model
+// models/blog.go
 type Blog struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	Title     string    `json:"title"`
-	Content   string    `json:"content"`
-	Author    string    `json:"author"`
-	Likes     int       `json:"likes"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Comments  []Comment `gorm:"foreignKey:BlogID" json:"comments"`
+	gorm.Model
+	Title    string `json:"title"`
+	Content  string `json:"content"`
+	UserID   uint   `json:"user_id"`
+	Likes    int    `json:"likes"`
+	Category string `json:"category"`
 }
 
-// Comment Model
+// models/comment.go
 type Comment struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	BlogID    uint      `json:"blog_id"`
-	Author    string    `json:"author"`
-	Content   string    `json:"content"`
-	CreatedAt time.Time `json:"created_at"`
+	gorm.Model
+	Content string `json:"content"`
+	BlogID  uint   `json:"blog_id"`
+	UserID  uint   `json:"user_id"`
 }
 
-// Like Model
-type Like struct {
-	ID     uint `gorm:"primaryKey" json:"id"`
-	BlogID uint `json:"blog_id"`
+// models/blog_like.go
+type BlogLike struct {
+	gorm.Model
 	UserID uint `json:"user_id"`
+	BlogID uint `json:"blog_id"`
 }

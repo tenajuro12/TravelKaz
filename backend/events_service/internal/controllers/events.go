@@ -5,7 +5,10 @@ import (
 	"diplomaPorject/backend/events_service/utils/db"
 	"encoding/json"
 	"github.com/gorilla/mux"
+	"log"
+	"math"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -21,39 +24,55 @@ type EventRequest struct {
 }
 
 func CreateEvent(w http.ResponseWriter, r *http.Request) {
-	adminID := r.Context().Value("admin_id").(uint)
+	adminIDValue := r.Context().Value("admin_id")
+	if adminIDValue == nil {
+		log.Printf("No admin_id found in context")
+		http.Error(w, "Unauthorized - Admin ID missing", http.StatusUnauthorized)
+		return
+	}
+
+	adminID, ok := adminIDValue.(uint)
+	if !ok {
+		log.Printf("Invalid admin_id type in context: %T", adminIDValue)
+		http.Error(w, "Internal Server Error - Invalid admin ID", http.StatusInternalServerError)
+		return
+	}
+
 	var req EventRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("Failed to decode request body: %v", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	startDate, err := time.Parse(time.RFC3339, req.StartDate)
 	if err != nil {
+		log.Printf("Invalid start date format: %v", err)
 		http.Error(w, "Invalid start date format", http.StatusBadRequest)
 		return
 	}
 
 	endDate, err := time.Parse(time.RFC3339, req.EndDate)
 	if err != nil {
+		log.Printf("Invalid end date format: %v", err)
 		http.Error(w, "Invalid end date format", http.StatusBadRequest)
 		return
 	}
 
 	event := models.Event{
-
 		Title:       req.Title,
 		Description: req.Description,
 		StartDate:   startDate,
 		EndDate:     endDate,
 		Location:    req.Location,
 		Capacity:    req.Capacity,
-		AdminID:     uint(adminID),
+		AdminID:     adminID,
 		Category:    req.Category,
 		ImageURL:    req.ImageURL,
 	}
 
 	if err := db.DB.Create(&event).Error; err != nil {
+		log.Printf("Failed to create event: %v", err)
 		http.Error(w, "Failed to create event", http.StatusInternalServerError)
 		return
 	}
@@ -160,4 +179,52 @@ func UnpublishEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func ListPublishedEvents(w http.ResponseWriter, r *http.Request) {
+	var events []models.Event
+	query := db.DB.Where("is_published = ?", true)
+
+	if category := r.URL.Query().Get("category"); category != "" {
+		query = query.Where("category = ?", category)
+	}
+
+	page := 1
+	pageSize := 10
+	if pageParam := r.URL.Query().Get("page"); pageParam != "" {
+		if p, err := strconv.Atoi(pageParam); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	offset := (page - 1) * pageSize
+
+	var totalCount int64
+	query.Model(&models.Event{}).Count(&totalCount)
+
+	if err := query.
+		Order("start_date ASC"). // Sort by start date
+		Offset(offset).
+		Limit(pageSize).
+		Find(&events).Error; err != nil {
+		http.Error(w, "Failed to fetch events", http.StatusInternalServerError)
+		return
+	}
+
+	response := struct {
+		Events     []models.Event `json:"events"`
+		Total      int64          `json:"total"`
+		Page       int            `json:"page"`
+		PageSize   int            `json:"page_size"`
+		TotalPages int            `json:"total_pages"`
+	}{
+		Events:     events,
+		Total:      totalCount,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalPages: int(math.Ceil(float64(totalCount) / float64(pageSize))),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }

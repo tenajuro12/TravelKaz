@@ -3,7 +3,5 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/diplomaPorject" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/diplomaPorject/frontend/travenor_flutter" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/frontend/travenor_flutter" vcs="Git" />
   </component>
 </project>

@@ -11,7 +11,7 @@ import (
 var DB *gorm.DB
 
 func ConnectDB() {
-	dsn := "host=localhost user=postgres password=123456 dbname=TravelApp port=5432 sslmode=disable"
+	dsn := "host=db user=postgres password=123456 dbname=TravelApp port=5432 sslmode=disable"
 	dbInstance, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
@@ -20,7 +20,7 @@ func ConnectDB() {
 	DB = dbInstance
 
 	// AutoMigrate models
-	err = DB.AutoMigrate(&models.Blog{}, &models.Comment{}, &models.Like{})
+	err = DB.AutoMigrate(&models.Blog{}, &models.Comment{}, &models.BlogLike{})
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}

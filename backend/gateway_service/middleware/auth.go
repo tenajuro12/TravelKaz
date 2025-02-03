@@ -8,10 +8,8 @@ import (
 
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Log incoming request
 		log.Printf("Incoming request to: %s", r.URL.Path)
 
-		// Check for cookie
 		cookie, err := r.Cookie("session_token")
 		if err != nil {
 			log.Printf("No session_token cookie found: %v", err)
@@ -20,8 +18,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		}
 		log.Printf("Found session token: %s", cookie.Value)
 
-		// Forward the entire original cookie header
-		authServiceURL := "http://localhost:8082/validate-session"
+		authServiceURL := "http://auth-service:8082/validate-session"
 		req, err := http.NewRequest("GET", authServiceURL, nil)
 		if err != nil {
 			log.Printf("Error creating validation request: %v", err)
@@ -29,7 +26,6 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Forward ALL original cookies
 		req.Header.Set("Cookie", r.Header.Get("Cookie"))
 
 		client := &http.Client{}

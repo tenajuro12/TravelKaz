@@ -9,9 +9,8 @@ import (
 func SetupRoutes() *mux.Router {
 	r := mux.NewRouter()
 
-	// Set up routes with middleware
 	admin := r.PathPrefix("/admin/events").Subrouter()
-	admin.Use(middleware.AdminAuthMiddleware) // Use the middleware here
+	admin.Use(middleware.AdminAuthMiddleware)
 	admin.HandleFunc("", controllers.CreateEvent).Methods("POST")
 	admin.HandleFunc("", controllers.ListEvents).Methods("GET")
 	admin.HandleFunc("/{id}", controllers.GetEvent).Methods("GET")
@@ -19,6 +18,6 @@ func SetupRoutes() *mux.Router {
 	admin.HandleFunc("/{id}", controllers.DeleteEvent).Methods("DELETE")
 	admin.HandleFunc("/{id}/publish", controllers.PublishEvent).Methods("POST")
 	admin.HandleFunc("/{id}/unpublish", controllers.UnpublishEvent).Methods("POST")
-
+	r.HandleFunc("/events", controllers.ListPublishedEvents).Methods("GET")
 	return r
 }

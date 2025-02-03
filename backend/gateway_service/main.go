@@ -1,8 +1,8 @@
 package main
 
 import (
-	"diplomaPorject/backend/gateway_service/middleware"
 	"fmt"
+	middlewares "gateway_service/middleware"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
@@ -15,6 +15,12 @@ func main() {
 	r := mux.NewRouter()
 
 	r.PathPrefix("/blogs").Handler(middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		serveReverseProxy(w, r)
+	})))
+	r.PathPrefix("/validate-admin").Handler(middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		serveReverseProxy(w, r)
+	})))
+	r.PathPrefix("/validate-session").Handler(middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		serveReverseProxy(w, r)
 	})))
 
@@ -41,9 +47,9 @@ func main() {
 }
 
 func serveReverseProxy(w http.ResponseWriter, r *http.Request) {
-	blogServiceURL := "http://localhost:8081"
-	authServiceURL := "http://localhost:8082"
-	eventsServiceURL := "http://localhost:8083"
+	blogServiceURL := "http://blogs-service:8081"
+	authServiceURL := "http://auth-service:8082"
+	eventsServiceURL := "http://events-service:8083"
 
 	var target string
 	switch {
@@ -55,6 +61,8 @@ func serveReverseProxy(w http.ResponseWriter, r *http.Request) {
 		target = eventsServiceURL
 	case strings.HasPrefix(r.URL.Path, "/events"):
 		target = eventsServiceURL
+	case strings.HasPrefix(r.URL.Path, "/validate-admin") || strings.HasPrefix(r.URL.Path, "/validate-session"):
+		target = authServiceURL
 	default:
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
@@ -67,6 +75,12 @@ func serveReverseProxy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	proxy := httputil.NewSingleHostReverseProxy(url)
+
+	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		log.Printf("Proxy error: %v", err)
+		http.Error(w, "Service unavailable", http.StatusServiceUnavailable)
+	}
+
 	r.Host = url.Host
 	proxy.ServeHTTP(w, r)
 }

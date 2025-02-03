@@ -9,6 +9,7 @@ import (
 	"errors"
 	"gorm.io/gorm"
 	"net/http"
+	"time"
 )
 
 func Register(w http.ResponseWriter, r *http.Request) {
@@ -116,14 +117,17 @@ func ValidateSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var session model.Session
-	if err := db.DB.Where("token = ?", cookie.Value).First(&session).Error; err != nil {
+	if err := db.DB.Where("token = ? AND expires_at > ?",
+		cookie.Value, time.Now()).First(&session).Error; err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]uint{
+		"user_id": session.UserID,
+	})
 }
-
 func ValidateAdmin(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
@@ -139,14 +143,17 @@ func ValidateAdmin(w http.ResponseWriter, r *http.Request) {
 
 	var user model.User
 	if err := db.DB.First(&user, session.UserID).Error; err != nil {
-		http.Error(w, "You are not admin", http.StatusUnauthorized)
+		http.Error(w, "User not found", http.StatusUnauthorized)
 		return
 	}
 
 	if !user.IsAdmin {
-		http.Error(w, "Forbidden", http.StatusForbidden)
+		http.Error(w, "Forbidden", http.StatusUnauthorized) // Changed to 401
 		return
 	}
-
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]uint{
+		"admin_id": user.ID,
+	})
 	w.WriteHeader(http.StatusOK)
 }
