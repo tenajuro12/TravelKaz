@@ -13,6 +13,7 @@ import (
 )
 
 func Register(w http.ResponseWriter, r *http.Request) {
+
 	var creds struct {
 		Username string `json:"username"`
 		Email    string `json:"'email'"`
@@ -47,8 +48,13 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 
-	json.NewDecoder(r.Body).Decode(&creds)
+	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
 	var user model.User
+
 	if err := db.DB.Where("email=?", creds.Email).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			http.Error(w, "Invalid credentials", http.StatusUnauthorized)
@@ -64,12 +70,13 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := utils.CreateSession(w, r, user.ID); err != nil {
-		http.Error(w, "Session error", http.StatusInternalServerError)
+		http.Error(w, "Failed to create session", http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Login successful"})
 
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"message":"Login successful"}`))
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {

@@ -14,6 +14,8 @@ import (
 func main() {
 	r := mux.NewRouter()
 
+	handler := middlewares.CorsMiddleware(r)
+
 	r.PathPrefix("/blogs").Handler(middlewares.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		serveReverseProxy(w, r)
 	})))
@@ -42,8 +44,8 @@ func main() {
 		serveReverseProxy(w, r)
 	}))
 
-	fmt.Println("Gateway running on port 8080...")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	fmt.Println("gay running on port 8080...")
+	log.Fatal(http.ListenAndServe(":8080", handler))
 }
 
 func serveReverseProxy(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +77,6 @@ func serveReverseProxy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	proxy := httputil.NewSingleHostReverseProxy(url)
-
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		log.Printf("Proxy error: %v", err)
 		http.Error(w, "Service unavailable", http.StatusServiceUnavailable)

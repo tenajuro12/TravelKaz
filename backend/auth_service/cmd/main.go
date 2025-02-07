@@ -9,6 +9,7 @@ import (
 )
 
 func main() {
+
 	db.ConnectDB()
 	if db.DB == nil {
 		log.Fatal("Database connection is nil!")
